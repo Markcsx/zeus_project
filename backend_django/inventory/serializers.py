@@ -1,13 +1,16 @@
 from rest_framework import serializers
-from .models import Product, SalesRecord
+from .models import Product, Sale
+
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = ["id", "sku", "name", "category", "description", "price", "stock", "created_at"]
 
 
-class SalesRecordSerializer(serializers.ModelSerializer):
+class SaleSerializer(serializers.ModelSerializer):
+    product_sku = serializers.CharField(source="product.sku", read_only=True)
+
     class Meta:
-        model = SalesRecord
-        fields = '__all__'
+        model = Sale
+        fields = ["id", "product", "product_sku", "date", "quantity", "created_at"]

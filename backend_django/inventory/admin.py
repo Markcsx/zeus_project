@@ -1,6 +1,5 @@
 from django.contrib import admin
-from .models import Product, SalesRecord
+from .models import Product, Sale
 
-# Register your models here.
 admin.site.register(Product)
-admin.site.register(SalesRecord)   
+admin.site.register(Sale)
