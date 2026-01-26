@@ -32,7 +32,22 @@ uvicorn main:app --reload --port 8001
 ## Endpoints clave (Django)
 - CRUD productos: `GET/POST http://127.0.0.1:8000/api/products/`
 - CRUD ventas: `GET/POST http://127.0.0.1:8000/api/sales/`
-- Forecast por producto: `GET http://127.0.0.1:8000/api/products/<id>/forecast/?horizon=12&freq=M`
+- Forecast por producto (12 meses por defecto): `GET http://127.0.0.1:8000/api/products/<id>/forecast/?horizon=12&freq=M`
+- Simulación de stock: `POST http://127.0.0.1:8000/api/products/<id>/simulate/`  
+  Body ej:
+  ```json
+  {
+    "horizon": 12,
+    "planned": [12, 9, 8],      // demanda manual; si faltan meses se rellenan con 0
+    "incoming": [0, 30, 0],     // reposición mensual opcional
+    "start_date": "2025-09-01", // opcional: arrancar historia y simulación desde esa fecha
+    "current_stock": 50         // opcional: override del stock inicial
+  }
+  ```
+  Respuesta incluye `stock_projection`, `out_of_stock_month_index` y `restock_suggestions` (mes y cantidad sugerida).
+
+## Admin directo
+- Abrir `http://127.0.0.1:8000/` redirige al panel admin.
 
 ## Notas
 - `FASTAPI_URL` configurable vía env var en `backend_django/config/settings.py` (default `http://127.0.0.1:8001`).

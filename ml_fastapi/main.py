@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 
-app = FastAPI(title="ML Forecast Service", version="0.1.0")
+app = FastAPI(title="ML Forecast Service", version="0.2.0")
 
 
 class ForecastRequest(BaseModel):
@@ -22,6 +22,28 @@ class ForecastResponse(BaseModel):
     forecast: List[float]
 
 
+def seasonal_mean_forecast(history: np.ndarray, horizon: int, season_length: int = 12) -> List[float]:
+    """
+    Forecast con estacionalidad mensual:
+    - Si hay >= 1 temporada completa, calcula la media por mes y repite el patrón.
+    - Si no, usa media móvil de las últimas k observaciones.
+    """
+    n = history.size
+    if n >= season_length:
+        usable = history[-(n // season_length * season_length) :]
+        seasons = usable.reshape(-1, season_length)
+        month_means = seasons.mean(axis=0)
+        reps = int(np.ceil(horizon / season_length))
+        forecast = np.tile(month_means, reps)[:horizon]
+    elif n > 0:
+        k = min(6, n)
+        avg = float(history[-k:].mean())
+        forecast = np.full(horizon, avg)
+    else:
+        forecast = np.zeros(horizon)
+    return forecast.tolist()
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -33,11 +55,6 @@ def forecast(req: ForecastRequest):
         raise HTTPException(status_code=400, detail="El horizonte debe ser positivo.")
 
     hist = np.array(req.history, dtype=float)
-    if hist.size == 0:
-        pred = [0.0] * req.horizon
-    else:
-        k = min(6, hist.size)
-        avg = float(hist[-k:].mean())
-        pred = [avg] * req.horizon
+    pred = seasonal_mean_forecast(hist, req.horizon, season_length=12 if req.freq.upper() == "M" else 4)
 
     return ForecastResponse(sku=req.sku, horizon=req.horizon, forecast=pred)
