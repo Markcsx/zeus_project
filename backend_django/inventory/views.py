@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from django.conf import settings
@@ -7,8 +7,13 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Product, Sale
-from .serializers import ProductSerializer, SaleSerializer
+from .models import Product, Sale, Forecast, ForecastMetric
+from .serializers import (
+    ProductSerializer,
+    SaleSerializer,
+    ForecastSerializer,
+    ForecastMetricSerializer,
+)
 
 
 def _month_iter(start: date, end: date):
@@ -67,6 +72,7 @@ class ProductViewSet(ProductSimulationMixin, viewsets.ModelViewSet):
         product = self.get_object()
         horizon = int(request.query_params.get("horizon", 12))
         freq = request.query_params.get("freq", "M")
+        evaluate = request.query_params.get("evaluate", "false").lower() == "true"
 
         history = build_monthly_history(product)
         payload = {
@@ -92,7 +98,79 @@ class ProductViewSet(ProductSimulationMixin, viewsets.ModelViewSet):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        return Response(data)
+        # Persist forecast records with fechas futuras consecutivas (mensuales)
+        if history:
+            last_date = Sale.objects.filter(product=product).order_by("-date").first().date
+        else:
+            last_date = date.today()
+
+        start_month = (last_date.replace(day=1) + timedelta(days=32)).replace(day=1)
+        forecast_objs = []
+        for i, value in enumerate(data.get("forecast", [])):
+            forecast_date = (start_month + timedelta(days=32 * i)).replace(day=1)
+            forecast_objs.append(
+                Forecast(
+                    product=product,
+                    model_name="ETS",
+                    forecast_date=forecast_date,
+                    forecast_value=value,
+                )
+            )
+        if forecast_objs:
+            Forecast.objects.bulk_create(forecast_objs)
+
+        metrics_payload = None
+        if evaluate and len(history) >= 6:
+            # simple hold-out: últimos test_len puntos para evaluar
+            test_len = min(3, len(history) // 3) or 1
+            train_hist = history[:-test_len]
+            test_hist = history[-test_len:]
+            eval_payload = {
+                "sku": product.sku,
+                "history": train_hist,
+                "horizon": test_len,
+                "freq": freq,
+            }
+            try:
+                import requests
+                import time
+                import numpy as np
+
+                t0 = time.perf_counter()
+                r2 = requests.post(f"{settings.FASTAPI_URL}/forecast", json=eval_payload, timeout=10)
+                r2.raise_for_status()
+                pred_eval = r2.json().get("forecast", [])
+                elapsed = time.perf_counter() - t0
+                if len(pred_eval) >= test_len:
+                    y_true = np.array(test_hist, dtype=float)
+                    y_pred = np.array(pred_eval[:test_len], dtype=float)
+                    mae = float(np.mean(np.abs(y_true - y_pred)))
+                    rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
+                    mape = float(np.mean(np.abs((y_true - y_pred) / (y_true + 1e-8))) * 100)
+
+                    period_label = last_date.strftime("%Y-%m")
+                    metric_obj = ForecastMetric.objects.create(
+                        product=product,
+                        period=period_label,
+                        method="ETS",
+                        mae=mae,
+                        rmse=rmse,
+                        mape=mape,
+                        prediction_time_seconds=elapsed,
+                    )
+                    metrics_payload = ForecastMetricSerializer(metric_obj).data
+            except Exception as exc:  # noqa: BLE001
+                metrics_payload = {"error": str(exc)}
+
+        return Response(
+            {
+                "forecast": data.get("forecast", []),
+                "model": "ETS",
+                "horizon": horizon,
+                "history_length": len(history),
+                "metrics": metrics_payload,
+            }
+        )
 
     @action(detail=True, methods=["get", "post"])
     def simulate(self, request, pk=None):
@@ -187,6 +265,22 @@ class ProductViewSet(ProductSimulationMixin, viewsets.ModelViewSet):
                 "start_date": start_date.isoformat() if start_date else None,
             }
         )
+
+    @action(detail=True, methods=["get"])
+    def metrics(self, request, pk=None):
+        """Devuelve métricas guardadas para el producto."""
+        product = self.get_object()
+        metrics = product.metrics.all()
+        serializer = ForecastMetricSerializer(metrics, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["get"])
+    def forecasts(self, request, pk=None):
+        """Devuelve últimos pronósticos guardados para el producto."""
+        product = self.get_object()
+        forecasts = product.forecasts.all()[:50]
+        serializer = ForecastSerializer(forecasts, many=True)
+        return Response(serializer.data)
 
 
 class SaleViewSet(viewsets.ModelViewSet):

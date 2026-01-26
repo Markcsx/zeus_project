@@ -33,6 +33,7 @@ uvicorn main:app --reload --port 8001
 - CRUD productos: `GET/POST http://127.0.0.1:8000/api/products/`
 - CRUD ventas: `GET/POST http://127.0.0.1:8000/api/sales/`
 - Forecast por producto (12 meses por defecto): `GET http://127.0.0.1:8000/api/products/<id>/forecast/?horizon=12&freq=M`
+- Forecast con evaluación: añade `&evaluate=true` y calculará MAE/RMSE/MAPE con hold-out interno y guardará métricas.
 - Simulación de stock: `POST http://127.0.0.1:8000/api/products/<id>/simulate/`  
   Body ej:
   ```json
@@ -45,6 +46,8 @@ uvicorn main:app --reload --port 8001
   }
   ```
   Respuesta incluye `stock_projection`, `out_of_stock_month_index` y `restock_suggestions` (mes y cantidad sugerida).
+- Métricas guardadas: `GET http://127.0.0.1:8000/api/products/<id>/metrics/`
+- Pronósticos guardados: `GET http://127.0.0.1:8000/api/products/<id>/forecasts/`
 
 ## Admin directo
 - Abrir `http://127.0.0.1:8000/` redirige al panel admin.

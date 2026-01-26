@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.conf import settings
 
-from .models import Product, Sale
+from .models import Product, Sale, Forecast, ForecastMetric
 from .views import build_monthly_history, ProductSimulationMixin
 
 
@@ -92,3 +92,19 @@ class SaleAdmin(admin.ModelAdmin):
     list_filter = ("date", "product")
     search_fields = ("product__sku", "product__name")
     ordering = ("-date",)
+
+
+@admin.register(Forecast)
+class ForecastAdmin(admin.ModelAdmin):
+    list_display = ("product", "model_name", "forecast_date", "forecast_value", "generated_at")
+    list_filter = ("model_name", "forecast_date", "generated_at")
+    search_fields = ("product__sku", "product__name")
+    ordering = ("-generated_at", "-forecast_date")
+
+
+@admin.register(ForecastMetric)
+class ForecastMetricAdmin(admin.ModelAdmin):
+    list_display = ("product", "period", "method", "mae", "rmse", "mape", "prediction_time_seconds", "created_at")
+    list_filter = ("method", "period", "created_at")
+    search_fields = ("product__sku", "product__name")
+    ordering = ("-created_at",)
