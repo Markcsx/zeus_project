@@ -13,4 +13,4 @@ class SaleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Sale
-        fields = ["id", "product", "product_sku", "date", "quantity", "created_at"]
+        fields = ["id", "product", "product_sku", "date", "serial_number", "client_name", "total_price"]
