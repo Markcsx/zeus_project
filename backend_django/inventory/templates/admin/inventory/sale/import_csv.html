@@ -1,0 +1,27 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>{% translate "Importar ventas desde CSV" %}</h1>
+
+<p>Formato esperado: columnas <code>sku,date,serial_number,client_name,total_price</code>. La fecha usa <code>YYYY-MM-DD</code>. Si no incluyes <code>serial_number</code>, se autogenera.</p>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <div class="form-row">
+    <label for="id_file">{% translate "Archivo CSV" %}</label>
+    <input type="file" name="file" id="id_file" accept=".csv" required>
+  </div>
+  <div class="submit-row">
+    <input type="submit" value="{% translate "Importar" %}" class="default">
+    <a href="../" class="button">{% translate "Cancelar" %}</a>
+  </div>
+</form>
+
+{% if sample %}
+<details style="margin-top: 1em;">
+  <summary>Ejemplo</summary>
+  <pre>{{ sample }}</pre>
+</details>
+{% endif %}
+{% endblock %}
