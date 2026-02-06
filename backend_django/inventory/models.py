@@ -56,36 +56,3 @@ class Sale(models.Model):
             product_id = self.product_id
             super().delete(*args, **kwargs)
             Product.objects.filter(pk=product_id).update(stock=F("stock") + qty)
-
-
-class Forecast(models.Model):
-    MODEL_CHOICES = (
-        ("ETS", "Holt-Winters ETS"),
-        ("BASELINE", "Baseline estacional"),
-    )
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="forecasts")
-    model_name = models.CharField(max_length=30, choices=MODEL_CHOICES, default="ETS")
-    forecast_date = models.DateField()
-    forecast_value = models.FloatField()
-    generated_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-generated_at", "-forecast_date"]
-
-
-class ForecastMetric(models.Model):
-    METHOD_CHOICES = (
-        ("ETS", "Holt-Winters ETS"),
-        ("BASELINE", "Baseline estacional"),
-    )
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="metrics")
-    period = models.CharField(max_length=7)  # "YYYY-MM" del horizonte evaluado
-    method = models.CharField(max_length=30, choices=METHOD_CHOICES)
-    mae = models.FloatField()
-    rmse = models.FloatField()
-    mape = models.FloatField()
-    prediction_time_seconds = models.FloatField(default=0.0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-created_at"]

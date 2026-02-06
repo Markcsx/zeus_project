@@ -1,5 +1,5 @@
 from rest_framework.routers import DefaultRouter
-from .views import ProductViewSet, SaleViewSet
+from .api_views import ProductViewSet, SaleViewSet
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")

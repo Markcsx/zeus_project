@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Sale, Forecast, ForecastMetric
+from .models import Product, Sale
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -14,15 +14,3 @@ class SaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sale
         fields = ["id", "product", "product_sku", "date", "quantity", "created_at"]
-
-
-class ForecastSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Forecast
-        fields = ["id", "product", "model_name", "forecast_date", "forecast_value", "generated_at"]
-
-
-class ForecastMetricSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ForecastMetric
-        fields = ["id", "product", "period", "method", "mae", "rmse", "mape", "prediction_time_seconds", "created_at"]
