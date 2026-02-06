@@ -1,6 +1,7 @@
+from collections import defaultdict
 from datetime import date, datetime
+from decimal import Decimal
 
-from django.db.models import Count
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -22,24 +23,27 @@ class ProductViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def forecast(self, request, pk=None):
         """
-        Predice ventas del próximo mes usando el promedio mensual histórico
-        (conteo de ventas) y calcula stock necesario para cubrirlas.
+        Predice ventas del próximo mes calculando unidades vendidas por mes
+        (total_price / price del producto) y calcula el stock necesario para cubrirlas.
         """
         product = self.get_object()
-        sales_qs = list(
-            Sale.objects.filter(product=product)
-            .values("date__year", "date__month")
-            .annotate(total=Count("id"))
-            .order_by("date__year", "date__month")
-        )
+        sales = Sale.objects.filter(product=product).order_by("date")
+        price = product.price or Decimal("1")
 
-        history = [row["total"] for row in sales_qs]
-        # Predicción simple: repetir el total del último mes observado
-        forecast_units = history[-1] if history else 0
+        monthly_units = defaultdict(Decimal)
+        for s in sales:
+            units = (s.total_price or Decimal("0")) / price if price else Decimal("0")
+            # guardamos con max(0, units) por si precio negativo
+            units = max(units, Decimal("0"))
+            monthly_units[(s.date.year, s.date.month)] += units
 
-        last_sale_date = (
-            Sale.objects.filter(product=product).order_by("-date").first().date if history else date.today()
-        )
+        history = []
+        for (y, m) in sorted(monthly_units.keys()):
+            history.append({"month": f"{y}-{m:02d}", "total_units": float(monthly_units[(y, m)])})
+
+        forecast_units = int(round(history[-1]["total_units"])) if history else 0
+
+        last_sale_date = sales.last().date if sales.exists() else date.today()
         target_month = next_month(last_sale_date.replace(day=1))
 
         stock_needed = max(forecast_units - product.stock, 0)
@@ -53,13 +57,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 "predicted_sales_units": forecast_units,
                 "stock_shortage": stock_needed,
                 "stock_required": forecast_units,
-                "history": [
-                    {
-                        "month": f"{row['date__year']}-{row['date__month']:02d}",
-                        "total_sales": row["total"],
-                    }
-                    for row in sales_qs
-                ],
+                "history": history,
             }
         )
 
