@@ -92,9 +92,9 @@ function todayIso() {
 
 function money(value) {
     const n = Number(value || 0);
-    return new Intl.NumberFormat("es-ES", {
+    return new Intl.NumberFormat("es-PE", {
         style: "currency",
-        currency: "EUR",
+        currency: "PEN",
     }).format(n);
 }
 

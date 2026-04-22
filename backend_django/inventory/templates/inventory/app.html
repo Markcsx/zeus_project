@@ -52,7 +52,7 @@
                 <label>Categoria
                     <input type="text" id="productCategory" placeholder="Ej. Herramientas">
                 </label>
-                <label>Precio
+                <label>Precio (S/)
                     <input type="number" id="productPrice" min="0" step="0.01" required>
                 </label>
                 <label>Stock
@@ -121,7 +121,7 @@
                 <label>Cliente
                     <input type="text" id="saleClient" placeholder="Nombre cliente">
                 </label>
-                <label>Total venta
+                <label>Total venta (S/)
                     <input type="number" id="saleTotal" min="0" step="0.01" required>
                 </label>
                 <button type="submit" class="primary">Guardar venta</button>
@@ -167,6 +167,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="{% static 'inventory/app.js' %}" defer></script>
+    <script src="{% static 'inventory/app.js' %}?v=pen-20260421" defer></script>
 </body>
 </html>
