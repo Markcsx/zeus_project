@@ -55,7 +55,7 @@
                 <label>Precio (S/)
                     <input type="number" id="productPrice" min="0" step="0.01" required>
                 </label>
-                <label>Stock
+                <label>Stock inicial
                     <input type="number" id="productStock" min="0" step="1" required>
                 </label>
                 <label>Stock minimo
@@ -74,13 +74,17 @@
                             <th>SKU</th>
                             <th>Nombre</th>
                             <th>Categoria</th>
-                            <th>Precio</th>
-                            <th>Stock</th>
-                            <th>Minimo</th>
+	                            <th>Precio</th>
+	                            <th>Stock base</th>
+	                            <th>Reabastecido</th>
+	                            <th>Vendido</th>
+	                            <th>Stock actual</th>
+	                            <th>Minimo</th>
+	                            <th>Accion</th>
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
-                        <tr><td colspan="6" class="empty">Sin productos todavia.</td></tr>
+		                        <tr><td colspan="10" class="empty">Sin productos todavia.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -92,7 +96,40 @@
                 <p>Registrar y filtrar ventas por cliente, fecha o id.</p>
             </div>
 
+            <div class="subsection-head">
+                <h3>Añadir venta</h3>
+            </div>
+
+            <form id="saleForm" class="form-grid sale-grid">
+                <label>Producto
+                    <select id="saleProduct" required></select>
+                </label>
+                <label>Fecha
+                    <input type="date" id="saleDate" required>
+                </label>
+                <label>Unidades
+                    <input type="number" id="saleQuantity" min="1" step="1" value="1" required>
+                </label>
+                <label>Serial (opcional)
+                    <input type="text" id="saleSerial" placeholder="Auto si vacio">
+                </label>
+                <label>Cliente
+                    <input type="text" id="saleClient" placeholder="Nombre cliente">
+                </label>
+                <label>Total venta (S/)
+                    <input type="number" id="saleTotal" min="0" step="0.01" required>
+                </label>
+                <button type="submit" class="primary">Guardar venta</button>
+            </form>
+
+            <div class="subsection-head">
+                <h3>Buscar ventas</h3>
+            </div>
+
             <div class="filters-row">
+                <label>Producto
+                    <select id="filterProduct"></select>
+                </label>
                 <label>ID
                     <input type="number" id="filterSaleId" min="1" step="1" placeholder="Ej. 4">
                 </label>
@@ -108,30 +145,8 @@
                 </div>
             </div>
 
-            <form id="saleForm" class="form-grid sale-grid">
-                <label>Producto
-                    <select id="saleProduct" required></select>
-                </label>
-	                <label>Fecha
-	                    <input type="date" id="saleDate" required>
-	                </label>
-	                <label>Unidades
-	                    <input type="number" id="saleQuantity" min="1" step="1" value="1" required>
-	                </label>
-	                <label>Serial (opcional)
-	                    <input type="text" id="saleSerial" placeholder="Auto si vacio">
-	                </label>
-                <label>Cliente
-                    <input type="text" id="saleClient" placeholder="Nombre cliente">
-                </label>
-                <label>Total venta (S/)
-                    <input type="number" id="saleTotal" min="0" step="0.01" required>
-                </label>
-                <button type="submit" class="primary">Guardar venta</button>
-            </form>
-
-            <div class="table-wrap">
-                <table>
+	            <div class="table-wrap">
+	                <table>
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -146,9 +161,14 @@
                     <tbody id="salesTableBody">
                         <tr><td colspan="7" class="empty">Sin ventas todavia.</td></tr>
                     </tbody>
-                </table>
-            </div>
-        </section>
+	                </table>
+	            </div>
+	            <div class="pagination">
+	                <button type="button" id="salesPrev" class="ghost">Anterior</button>
+	                <span id="salesPageInfo">Pagina 1</span>
+	                <button type="button" id="salesNext" class="ghost">Siguiente</button>
+	            </div>
+	        </section>
 
         <section class="panel">
             <div class="section-head">
@@ -156,12 +176,15 @@
                 <p>Prediccion de unidades y stock recomendado para los proximos 12 meses.</p>
             </div>
 
-            <div class="forecast-controls">
-                <label>Producto
-                    <select id="forecastProduct"></select>
-                </label>
-                <button type="button" id="forecastBtn" class="primary">Consultar forecast</button>
-            </div>
+	            <div class="forecast-controls">
+	                <label>Producto
+	                    <select id="forecastProduct"></select>
+	                </label>
+	                <label>Inicio forecast
+	                    <input type="month" id="forecastStartMonth">
+	                </label>
+	                <button type="button" id="forecastBtn" class="primary">Consultar forecast</button>
+	            </div>
 
             <div id="forecastResult" class="forecast-box empty-box">
                 Selecciona un producto y pulsa "Consultar forecast".
@@ -171,6 +194,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="{% static 'inventory/app.js' %}?v=qty-forecast-20260509" defer></script>
+    <script src="{% static 'inventory/app.js' %}?v=restock-forecast-start-20260509" defer></script>
 </body>
 </html>

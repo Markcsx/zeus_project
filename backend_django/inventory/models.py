@@ -2,6 +2,9 @@ from datetime import date
 
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Sum
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
 
@@ -11,6 +14,7 @@ class Product(models.Model):
     category = models.CharField(max_length=120, blank=True, default="")
     description = models.TextField(blank=True, default="")
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    stock_initial = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     stock = models.IntegerField(default=0)
     stock_min = models.IntegerField(default=0)
     created_at = models.DateTimeField(default=timezone.now)
@@ -46,6 +50,25 @@ class Product(models.Model):
             self.sku = self._generate_sku()
         super().save(*args, **kwargs)
 
+    @property
+    def units_sold_total(self):
+        if not self.pk:
+            return 0
+        return self.sales.aggregate(total=Sum("quantity"))["total"] or 0
+
+    @property
+    def stock_received_total(self):
+        if not self.pk:
+            return 0
+        return self.stock_movements.aggregate(total=Sum("quantity"))["total"] or 0
+
+    def recalculate_stock(self, save=True):
+        available = int(self.stock_initial or 0) + int(self.stock_received_total)
+        self.stock = max(available - int(self.units_sold_total), 0)
+        if save:
+            Product.objects.filter(pk=self.pk).update(stock=self.stock)
+        return self.stock
+
     def __str__(self):
         return self.sku or self.name
 
@@ -63,3 +86,25 @@ class Sale(models.Model):
 
     def __str__(self):
         return f"Sale({self.product.sku}, {self.date}, qty={self.quantity})"
+
+
+class StockMovement(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="stock_movements")
+    date = models.DateField(default=date.today)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    note = models.CharField(max_length=255, blank=True, default="")
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+
+    def __str__(self):
+        return f"Restock({self.product.sku}, {self.quantity}, {self.date})"
+
+
+@receiver(post_save, sender=Sale)
+@receiver(post_delete, sender=Sale)
+@receiver(post_save, sender=StockMovement)
+@receiver(post_delete, sender=StockMovement)
+def update_product_stock(sender, instance, **kwargs):
+    instance.product.recalculate_stock()

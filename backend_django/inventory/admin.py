@@ -10,11 +10,11 @@ from django.template.response import TemplateResponse
 from django.urls import path
 from rest_framework.reverse import reverse
 
-from .models import Product, Sale
+from .models import Product, Sale, StockMovement
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("sku", "name", "category", "stock", "created_at")
+    list_display = ("sku", "name", "category", "stock_initial", "stock_received_total", "stock", "created_at")
     search_fields = ("sku", "name", "category")
     list_filter = ("category", "created_at")
     ordering = ("-created_at",)
@@ -150,3 +150,11 @@ class SaleAdmin(admin.ModelAdmin):
             "sample": sample.replace(",", ";"),
         }
         return TemplateResponse(request, "admin/inventory/sale/import_csv.html", context)
+
+
+@admin.register(StockMovement)
+class StockMovementAdmin(admin.ModelAdmin):
+    list_display = ("product", "date", "quantity", "note", "created_at")
+    list_filter = ("date", "product")
+    search_fields = ("product__sku", "product__name", "note")
+    ordering = ("-date", "-id")

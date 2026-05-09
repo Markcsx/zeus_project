@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from .forecasting import ForecastingDependencyError, lstm_forecast
-from .models import Product, Sale
+from .models import Product, Sale, StockMovement
 from .serializers import ProductSerializer, SaleSerializer
 
 
@@ -16,6 +16,13 @@ def next_month(first_day: date) -> date:
     year = first_day.year + (1 if first_day.month == 12 else 0)
     month = 1 if first_day.month == 12 else first_day.month + 1
     return date(year, month, 1)
+
+
+def parse_month(month_value: str):
+    try:
+        return datetime.strptime(month_value, "%Y-%m").date().replace(day=1)
+    except (TypeError, ValueError):
+        return None
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -47,22 +54,30 @@ class ProductViewSet(viewsets.ModelViewSet):
         forecast_units = int(round(forecast.values[0])) if forecast.values else 0
 
         last_sale_date = sales.last().date if sales.exists() else date.today()
-        target_month = next_month(last_sale_date.replace(day=1))
+        requested_month = parse_month(request.query_params.get("start_month"))
+        target_month = requested_month or next_month(last_sale_date.replace(day=1))
         annual_forecast = []
         forecast_month = target_month
+        projected_stock = product.stock
         for raw_units in forecast.values:
             monthly_units = int(round(raw_units))
+            stock_shortage = max(monthly_units - projected_stock, 0)
+            stock_after_month = max(projected_stock - monthly_units, 0)
             annual_forecast.append(
                 {
                     "month": forecast_month.strftime("%Y-%m"),
                     "predicted_sales_units": monthly_units,
                     "stock_required": monthly_units,
-                    "stock_shortage": max(monthly_units - product.stock, 0),
+                    "starting_stock": projected_stock,
+                    "stock_shortage": stock_shortage,
+                    "recommended_restock": stock_shortage,
+                    "stock_after_month": stock_after_month,
                 }
             )
+            projected_stock = stock_after_month
             forecast_month = next_month(forecast_month)
 
-        stock_needed = max(forecast_units - product.stock, 0)
+        stock_needed = annual_forecast[0]["stock_shortage"] if annual_forecast else max(forecast_units - product.stock, 0)
 
         return Response(
             {
@@ -84,6 +99,21 @@ class ProductViewSet(viewsets.ModelViewSet):
             }
         )
 
+    @action(detail=True, methods=["post"])
+    def restock(self, request, pk=None):
+        product = self.get_object()
+        try:
+            quantity = int(request.data.get("quantity", 0))
+        except (TypeError, ValueError):
+            quantity = 0
+        if quantity <= 0:
+            return Response({"quantity": ["Debe ser mayor que cero."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        note = str(request.data.get("note", "")).strip()
+        StockMovement.objects.create(product=product, quantity=quantity, note=note)
+        product.refresh_from_db()
+        return Response(ProductSerializer(product).data)
+
 
 class SaleViewSet(viewsets.ModelViewSet):
     queryset = Sale.objects.select_related("product").all().order_by("-date")
@@ -103,6 +133,13 @@ class SaleViewSet(viewsets.ModelViewSet):
         client = params.get("client_name")
         if client:
             qs = qs.filter(client_name__icontains=client.strip())
+
+        product_id = params.get("product")
+        if product_id:
+            try:
+                qs = qs.filter(product_id=int(product_id))
+            except ValueError:
+                pass
 
         date_str = params.get("date")
         if date_str:

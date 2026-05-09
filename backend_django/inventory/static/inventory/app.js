@@ -3,6 +3,11 @@
 const state = {
     products: [],
     sales: [],
+    salesPage: 1,
+    salesPageSize: 50,
+    salesCount: 0,
+    salesNext: null,
+    salesPrevious: null,
 };
 
 const ui = {
@@ -11,9 +16,14 @@ const ui = {
     productsTableBody: $("productsTableBody"),
     salesTableBody: $("salesTableBody"),
     saleProduct: $("saleProduct"),
+    filterProduct: $("filterProduct"),
     forecastProduct: $("forecastProduct"),
+    forecastStartMonth: $("forecastStartMonth"),
     forecastBtn: $("forecastBtn"),
     forecastResult: $("forecastResult"),
+    salesPrev: $("salesPrev"),
+    salesNext: $("salesNext"),
+    salesPageInfo: $("salesPageInfo"),
     statProducts: $("statProducts"),
     statSales: $("statSales"),
     statRisk: $("statRisk"),
@@ -100,7 +110,7 @@ function money(value) {
 
 function updateStats() {
     ui.statProducts.textContent = String(state.products.length);
-    ui.statSales.textContent = String(state.sales.length);
+    ui.statSales.textContent = String(state.salesCount || state.sales.length);
     const risk = state.products.filter((p) => Number(p.stock) < Number(p.stock_min)).length;
     ui.statRisk.textContent = String(risk);
 }
@@ -113,11 +123,12 @@ function setProductSelectOptions() {
     const placeholder = '<option value="">Selecciona producto</option>';
     ui.saleProduct.innerHTML = placeholder + options;
     ui.forecastProduct.innerHTML = placeholder + options;
+    ui.filterProduct.innerHTML = '<option value="">Todos los productos</option>' + options;
 }
 
 function renderProducts() {
     if (!state.products.length) {
-        ui.productsTableBody.innerHTML = '<tr><td colspan="6" class="empty">Sin productos todavia.</td></tr>';
+        ui.productsTableBody.innerHTML = '<tr><td colspan="10" class="empty">Sin productos todavia.</td></tr>';
         updateStats();
         return;
     }
@@ -131,8 +142,16 @@ function renderProducts() {
                     <td>${p.name || "-"}</td>
                     <td>${p.category || "-"}</td>
                     <td>${money(p.price)}</td>
+                    <td>${p.stock_initial ?? 0}</td>
+                    <td>${p.stock_received_total ?? 0}</td>
+                    <td>${p.units_sold_total ?? 0}</td>
                     <td class="${warningClass}">${p.stock}</td>
                     <td>${p.stock_min}</td>
+                    <td>
+                        <button type="button" class="ghost restock-btn" data-product-id="${p.id}">
+                            Reabastecer
+                        </button>
+                    </td>
                 </tr>
             `;
         })
@@ -144,6 +163,7 @@ function renderProducts() {
 function renderSales() {
     if (!state.sales.length) {
         ui.salesTableBody.innerHTML = '<tr><td colspan="7" class="empty">No hay ventas para este filtro.</td></tr>';
+        renderSalesPagination();
         updateStats();
         return;
     }
@@ -164,7 +184,15 @@ function renderSales() {
         )
         .join("");
 
+    renderSalesPagination();
     updateStats();
+}
+
+function renderSalesPagination() {
+    const totalPages = Math.max(1, Math.ceil((state.salesCount || 0) / state.salesPageSize));
+    ui.salesPageInfo.textContent = `Pagina ${state.salesPage} de ${totalPages} (${state.salesCount} ventas)`;
+    ui.salesPrev.disabled = !state.salesPrevious;
+    ui.salesNext.disabled = !state.salesNext;
 }
 
 async function loadProducts() {
@@ -174,13 +202,37 @@ async function loadProducts() {
     setProductSelectOptions();
 }
 
+async function handleRestock(productId) {
+    const product = state.products.find((p) => String(p.id) === String(productId));
+    const raw = window.prompt(`Cantidad a reabastecer para ${product ? product.sku : "producto"}`);
+    if (raw === null) {
+        return;
+    }
+    const quantity = Number(raw);
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+        showToast("Ingresa una cantidad entera mayor que cero", "error");
+        return;
+    }
+
+    await apiFetch(`/api/products/${productId}/restock/`, {
+        method: "POST",
+        body: JSON.stringify({ quantity, note: "Reabastecimiento desde panel operativo" }),
+    });
+    showToast("Stock reabastecido", "ok");
+    await loadProducts();
+}
+
 function currentSalesFilterQuery() {
     const params = new URLSearchParams();
 
     const id = $("filterSaleId").value.trim();
+    const productId = ui.filterProduct.value;
     const client = $("filterClient").value.trim();
     const date = $("filterDate").value;
 
+    if (productId) {
+        params.append("product", productId);
+    }
     if (id) {
         params.append("id", id);
     }
@@ -190,6 +242,8 @@ function currentSalesFilterQuery() {
     if (date) {
         params.append("date", date);
     }
+    params.append("page", String(state.salesPage));
+    params.append("page_size", String(state.salesPageSize));
 
     const query = params.toString();
     return query ? `?${query}` : "";
@@ -198,6 +252,9 @@ function currentSalesFilterQuery() {
 async function loadSales() {
     const data = await apiFetch(`/api/sales/${currentSalesFilterQuery()}`);
     state.sales = Array.isArray(data) ? data : data.results || [];
+    state.salesCount = Array.isArray(data) ? data.length : data.count || 0;
+    state.salesNext = Array.isArray(data) ? null : data.next;
+    state.salesPrevious = Array.isArray(data) ? null : data.previous;
     renderSales();
 }
 
@@ -215,9 +272,11 @@ function renderForecast(data) {
             (item) => `
                 <tr>
                     <td>${item.month}</td>
+                    <td>${item.starting_stock ?? "-"}</td>
                     <td>${item.predicted_sales_units}</td>
                     <td>${item.stock_required}</td>
-                    <td>${item.stock_shortage}</td>
+                    <td>${item.recommended_restock ?? item.stock_shortage}</td>
+                    <td>${item.stock_after_month ?? "-"}</td>
                 </tr>
             `,
         )
@@ -282,9 +341,11 @@ function renderForecast(data) {
                             <thead>
                                 <tr>
                                     <th>Mes</th>
+                                    <th>Stock inicial mes</th>
                                     <th>Unidades previstas</th>
                                     <th>Stock a tener</th>
-                                    <th>Faltante vs stock actual</th>
+                                    <th>Reposicion sugerida</th>
+                                    <th>Stock final mes</th>
                                 </tr>
                             </thead>
                             <tbody>${annualRows}</tbody>
@@ -303,7 +364,7 @@ async function handleCreateProduct(event) {
         category: $("productCategory").value.trim(),
         description: $("productDescription").value.trim(),
         price: Number($("productPrice").value),
-        stock: Number($("productStock").value),
+        stock_initial: Number($("productStock").value),
         stock_min: Number($("productStockMin").value),
     };
 
@@ -350,6 +411,7 @@ async function handleCreateSale(event) {
     $("saleQuantity").value = "1";
     showToast("Venta creada", "ok");
     await loadSales();
+    await loadProducts();
 }
 
 async function handleForecast() {
@@ -359,7 +421,12 @@ async function handleForecast() {
         return;
     }
 
-    const data = await apiFetch(`/api/products/${productId}/forecast/`);
+    const params = new URLSearchParams();
+    if (ui.forecastStartMonth.value) {
+        params.append("start_month", ui.forecastStartMonth.value);
+    }
+    const query = params.toString();
+    const data = await apiFetch(`/api/products/${productId}/forecast/${query ? `?${query}` : ""}`);
     renderForecast(data);
 }
 
@@ -375,13 +442,40 @@ async function bootstrap() {
     });
 
     $("applyFilters").addEventListener("click", () => {
+        state.salesPage = 1;
         loadSales().catch((err) => showToast(err.message, "error"));
     });
 
     $("clearFilters").addEventListener("click", () => {
         $("filterSaleId").value = "";
+        ui.filterProduct.value = "";
         $("filterClient").value = "";
         $("filterDate").value = "";
+        state.salesPage = 1;
+        loadSales().catch((err) => showToast(err.message, "error"));
+    });
+
+    ui.productsTableBody.addEventListener("click", (event) => {
+        const button = event.target.closest(".restock-btn");
+        if (!button) {
+            return;
+        }
+        handleRestock(button.dataset.productId).catch((err) => showToast(err.message, "error"));
+    });
+
+    ui.salesPrev.addEventListener("click", () => {
+        if (!state.salesPrevious || state.salesPage <= 1) {
+            return;
+        }
+        state.salesPage -= 1;
+        loadSales().catch((err) => showToast(err.message, "error"));
+    });
+
+    ui.salesNext.addEventListener("click", () => {
+        if (!state.salesNext) {
+            return;
+        }
+        state.salesPage += 1;
         loadSales().catch((err) => showToast(err.message, "error"));
     });
 

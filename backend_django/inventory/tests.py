@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
@@ -15,13 +16,14 @@ class ProductForecastTests(TestCase):
             name="Filtro de aire deportivo",
             category="Filtros",
             price=Decimal("45.00"),
+            stock_initial=10,
         )
 
         self.assertRegex(product.sku, r"^FIL-FIL-\d{3}$")
 
     def test_auto_sku_increments_for_same_prefix(self):
-        first = Product.objects.create(name="Sensor de temperatura", category="Sensores")
-        second = Product.objects.create(name="Sensor de presion", category="Sensores")
+        first = Product.objects.create(name="Sensor de temperatura", category="Sensores", stock_initial=10)
+        second = Product.objects.create(name="Sensor de presion", category="Sensores", stock_initial=10)
 
         self.assertEqual(first.sku, "SEN-SEN-001")
         self.assertEqual(second.sku, "SEN-SEN-002")
@@ -36,7 +38,7 @@ class ProductForecastTests(TestCase):
         )
 
     def test_forecast_uses_lstm_when_history_is_sufficient(self):
-        product = Product.objects.create(name="Mouse", price=Decimal("10.00"), stock=3)
+        product = Product.objects.create(name="Mouse", price=Decimal("10.00"), stock_initial=100, stock=100)
         for month, units in enumerate([4, 7, 6, 9, 8, 11], start=1):
             self.create_sale(product, date(2026, month, 1), units)
 
@@ -59,9 +61,28 @@ class ProductForecastTests(TestCase):
         self.assertEqual(data["predicted_sales_units"], 12)
         self.assertEqual(len(data["annual_forecast"]), 12)
         self.assertEqual(data["annual_forecast"][0]["stock_required"], 12)
+        self.assertIn("recommended_restock", data["annual_forecast"][0])
+
+    def test_forecast_accepts_custom_start_month(self):
+        product = Product.objects.create(name="Alternador", price=Decimal("100.00"), stock_initial=100, stock=100)
+        self.create_sale(product, date(2026, 1, 1), 5)
+
+        forecast_result = ForecastResult(
+            values=[10.0] * 12,
+            method="LSTM_KERAS_TENSORFLOW",
+            lookback=12,
+            epochs=20,
+            history_points=12,
+            training_samples=6,
+        )
+        with patch("inventory.api_views.lstm_forecast", return_value=forecast_result):
+            response = self.client.get(f"{reverse('product-forecast', args=[product.pk])}?start_month=2027-04")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["annual_forecast"][0]["month"], "2027-04")
 
     def test_forecast_falls_back_for_short_history(self):
-        product = Product.objects.create(name="Keyboard", price=Decimal("20.00"), stock=1)
+        product = Product.objects.create(name="Keyboard", price=Decimal("20.00"), stock_initial=20, stock=20)
         self.create_sale(product, date(2026, 1, 1), 5)
 
         forecast_result = ForecastResult(
@@ -81,7 +102,7 @@ class ProductForecastTests(TestCase):
         self.assertEqual(data["predicted_sales_units"], 5)
 
     def test_sales_api_includes_units_sold(self):
-        product = Product.objects.create(name="Monitor", price=Decimal("50.00"), stock=1)
+        product = Product.objects.create(name="Monitor", price=Decimal("50.00"), stock_initial=10, stock=10)
         sale = Sale.objects.create(
             product=product,
             date=date(2026, 1, 1),
@@ -94,3 +115,42 @@ class ProductForecastTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["units_sold"], 3.0)
+
+    def test_sale_reduces_product_stock_from_initial_stock(self):
+        product = Product.objects.create(name="Bomba", category="Motor", price=Decimal("30.00"), stock_initial=20, stock=20)
+
+        Sale.objects.create(
+            product=product,
+            date=date(2026, 1, 1),
+            quantity=4,
+            serial_number="STOCK-TEST",
+            total_price=Decimal("120.00"),
+        )
+
+        product.refresh_from_db()
+        self.assertEqual(product.stock, 16)
+
+    def test_restock_increases_available_stock_without_changing_sales(self):
+        product = Product.objects.create(name="Radiador", category="Refrigeracion", price=Decimal("80.00"), stock_initial=20, stock=20)
+        Sale.objects.create(
+            product=product,
+            date=date(2026, 1, 1),
+            quantity=8,
+            serial_number="RESTOCK-SALE",
+            total_price=Decimal("640.00"),
+        )
+        product.refresh_from_db()
+        self.assertEqual(product.stock, 12)
+
+        response = self.client.post(
+            reverse("product-restock", args=[product.pk]),
+            data=json.dumps({"quantity": 5}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        product.refresh_from_db()
+        self.assertEqual(product.stock_initial, 20)
+        self.assertEqual(product.units_sold_total, 8)
+        self.assertEqual(product.stock_received_total, 5)
+        self.assertEqual(product.stock, 17)

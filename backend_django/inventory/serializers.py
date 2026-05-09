@@ -3,9 +3,25 @@ from .models import Product, Sale
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    units_sold_total = serializers.IntegerField(read_only=True)
+    stock_received_total = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Product
-        fields = ["id", "sku", "name", "category", "description", "price", "stock", "stock_min", "created_at"]
+        fields = [
+            "id",
+            "sku",
+            "name",
+            "category",
+            "description",
+            "price",
+            "stock_initial",
+            "stock_received_total",
+            "units_sold_total",
+            "stock",
+            "stock_min",
+            "created_at",
+        ]
 
 
 class SaleSerializer(serializers.ModelSerializer):
