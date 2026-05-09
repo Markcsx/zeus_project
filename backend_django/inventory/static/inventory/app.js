@@ -143,7 +143,7 @@ function renderProducts() {
 
 function renderSales() {
     if (!state.sales.length) {
-        ui.salesTableBody.innerHTML = '<tr><td colspan="6" class="empty">No hay ventas para este filtro.</td></tr>';
+        ui.salesTableBody.innerHTML = '<tr><td colspan="7" class="empty">No hay ventas para este filtro.</td></tr>';
         updateStats();
         return;
     }
@@ -157,6 +157,7 @@ function renderSales() {
                     <td>${s.product_sku || "-"}</td>
                     <td>${s.client_name || "-"}</td>
                     <td>${s.serial_number || "-"}</td>
+                    <td>${Number(s.units_sold || 0).toFixed(0)}</td>
                     <td>${money(s.total_price)}</td>
                 </tr>
             `,
@@ -209,6 +210,28 @@ function renderForecast(data) {
         .slice(-6)
         .map((h) => `<li>${h.month}: ${h.total_units.toFixed(1)} unidades</li>`)
         .join("");
+    const annualRows = (data.annual_forecast || [])
+        .map(
+            (item) => `
+                <tr>
+                    <td>${item.month}</td>
+                    <td>${item.predicted_sales_units}</td>
+                    <td>${item.stock_required}</td>
+                    <td>${item.stock_shortage}</td>
+                </tr>
+            `,
+        )
+        .join("");
+    const historyRows = (data.history || [])
+        .map(
+            (item) => `
+                <tr>
+                    <td>${item.month}</td>
+                    <td>${item.total_units.toFixed(0)}</td>
+                </tr>
+            `,
+        )
+        .join("");
 
     ui.forecastResult.className = "forecast-box";
     ui.forecastResult.innerHTML = `
@@ -231,8 +254,44 @@ function renderForecast(data) {
             </div>
         </div>
         <p><strong>SKU:</strong> ${data.sku || "-"}</p>
+        <p><strong>Modelo:</strong> ${data.forecast_model || "-"}</p>
+        ${data.forecast_message ? `<p><strong>Nota:</strong> ${data.forecast_message}</p>` : ""}
         <p><strong>Stock recomendado:</strong> ${data.stock_required ?? 0}</p>
         ${historyList ? `<p><strong>Historico (ultimos meses)</strong></p><ul class="mini-history">${historyList}</ul>` : "<p>Sin historico suficiente.</p>"}
+        ${
+            historyRows
+                ? `<h3>Unidades vendidas por mes</h3>
+                    <div class="table-wrap forecast-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mes</th>
+                                    <th>Unidades vendidas</th>
+                                </tr>
+                            </thead>
+                            <tbody>${historyRows}</tbody>
+                        </table>
+                    </div>`
+                : ""
+        }
+        ${
+            annualRows
+                ? `<h3>Forecast anual de stock</h3>
+                    <div class="table-wrap forecast-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mes</th>
+                                    <th>Unidades previstas</th>
+                                    <th>Stock a tener</th>
+                                    <th>Faltante vs stock actual</th>
+                                </tr>
+                            </thead>
+                            <tbody>${annualRows}</tbody>
+                        </table>
+                    </div>`
+                : ""
+        }
     `;
 }
 
@@ -275,6 +334,7 @@ async function handleCreateSale(event) {
     const payload = {
         product: productId,
         date: $("saleDate").value || todayIso(),
+        units_sold: Number($("saleQuantity").value || 1),
         serial_number: $("saleSerial").value.trim() || generateSerial(),
         client_name: $("saleClient").value.trim(),
         total_price: Number($("saleTotal").value),
@@ -287,6 +347,7 @@ async function handleCreateSale(event) {
 
     ui.saleForm.reset();
     $("saleDate").value = todayIso();
+    $("saleQuantity").value = "1";
     showToast("Venta creada", "ok");
     await loadSales();
 }

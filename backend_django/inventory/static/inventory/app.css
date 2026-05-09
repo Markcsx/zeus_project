@@ -330,6 +330,26 @@ tr:last-child td {
     font-size: 1.1rem;
 }
 
+.forecast-box h3 {
+    margin: 16px 0 8px;
+    font-size: 1rem;
+}
+
+.forecast-table {
+    margin-top: 8px;
+    background: #fff;
+}
+
+.forecast-table th,
+.forecast-table td {
+    text-align: right;
+}
+
+.forecast-table th:first-child,
+.forecast-table td:first-child {
+    text-align: left;
+}
+
 .mini-history {
     margin: 0;
     padding-left: 18px;

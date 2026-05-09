@@ -10,7 +10,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class SaleSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source="product.sku", read_only=True)
+    units_sold = serializers.IntegerField(source="quantity", min_value=1)
 
     class Meta:
         model = Sale
-        fields = ["id", "product", "product_sku", "date", "serial_number", "client_name", "total_price"]
+        fields = ["id", "product", "product_sku", "date", "serial_number", "client_name", "units_sold", "total_price"]

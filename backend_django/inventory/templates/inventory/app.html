@@ -15,7 +15,7 @@
         <div>
             <p class="eyebrow">ZEUS INVENTORY</p>
             <h1>Panel operativo</h1>
-            <p class="subtitle">Vista simple para gestionar productos, ventas y forecast mensual.</p>
+                <p class="subtitle">Vista simple para gestionar productos, ventas y forecast anual.</p>
         </div>
         <a class="admin-link" href="/admin/">Abrir admin</a>
     </header>
@@ -112,12 +112,15 @@
                 <label>Producto
                     <select id="saleProduct" required></select>
                 </label>
-                <label>Fecha
-                    <input type="date" id="saleDate" required>
-                </label>
-                <label>Serial (opcional)
-                    <input type="text" id="saleSerial" placeholder="Auto si vacio">
-                </label>
+	                <label>Fecha
+	                    <input type="date" id="saleDate" required>
+	                </label>
+	                <label>Unidades
+	                    <input type="number" id="saleQuantity" min="1" step="1" value="1" required>
+	                </label>
+	                <label>Serial (opcional)
+	                    <input type="text" id="saleSerial" placeholder="Auto si vacio">
+	                </label>
                 <label>Cliente
                     <input type="text" id="saleClient" placeholder="Nombre cliente">
                 </label>
@@ -136,11 +139,12 @@
                             <th>SKU</th>
                             <th>Cliente</th>
                             <th>Serial</th>
+                            <th>Unidades</th>
                             <th>Total</th>
                         </tr>
                     </thead>
                     <tbody id="salesTableBody">
-                        <tr><td colspan="6" class="empty">Sin ventas todavia.</td></tr>
+                        <tr><td colspan="7" class="empty">Sin ventas todavia.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -149,7 +153,7 @@
         <section class="panel">
             <div class="section-head">
                 <h2>Forecast</h2>
-                <p>Prediccion del siguiente mes para un producto.</p>
+                <p>Prediccion de unidades y stock recomendado para los proximos 12 meses.</p>
             </div>
 
             <div class="forecast-controls">
@@ -167,6 +171,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="{% static 'inventory/app.js' %}?v=pen-20260421" defer></script>
+    <script src="{% static 'inventory/app.js' %}?v=qty-forecast-20260509" defer></script>
 </body>
 </html>

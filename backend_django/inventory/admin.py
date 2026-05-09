@@ -32,7 +32,7 @@ class ProductAdmin(admin.ModelAdmin):
     
 @admin.register(Sale)
 class SaleAdmin(admin.ModelAdmin):
-    list_display = ("product", "date", "serial_number", "client_name", "total_price")
+    list_display = ("product", "date", "quantity", "serial_number", "client_name", "total_price")
     list_filter = ("date", "product")
     search_fields = ("product__sku", "product__name", "serial_number", "client_name")
     ordering = ("-date",)
@@ -52,7 +52,7 @@ class SaleAdmin(admin.ModelAdmin):
 
     def import_csv_view(self, request):
         """Carga masiva de ventas desde CSV con encabezados."""
-        sample = "sku,date,serial_number,client_name,total_price\nSKU123,2026-02-01,SN001,Cliente 1,120.50"
+        sample = "sku,date,quantity,serial_number,client_name,total_price\nSKU123,2026-02-01,3,SN001,Cliente 1,120.50"
 
         if request.method == "POST" and request.FILES.get("file"):
             uploaded = request.FILES["file"]
@@ -106,6 +106,14 @@ class SaleAdmin(admin.ModelAdmin):
                         serial = f"{sku}-{uuid4().hex[:6].upper()}"
 
                     client = (row.get("client_name") or "").strip()
+                    quantity_raw = (row.get("quantity") or row.get("units_sold") or "1").strip()
+                    try:
+                        quantity = int(quantity_raw)
+                    except Exception:
+                        raise ValueError(f"quantity invalido: '{quantity_raw}'")
+                    if quantity <= 0:
+                        raise ValueError("quantity debe ser mayor que cero")
+
                     total_raw = (row.get("total_price") or "").strip()
                     try:
                         total_price = parse_decimal(total_raw)
@@ -115,6 +123,7 @@ class SaleAdmin(admin.ModelAdmin):
                     Sale.objects.create(
                         product=product,
                         date=sale_date,
+                        quantity=quantity,
                         serial_number=serial,
                         client_name=client,
                         total_price=total_price,
