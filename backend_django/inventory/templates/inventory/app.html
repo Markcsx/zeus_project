@@ -8,14 +8,11 @@
     <link rel="stylesheet" href="{% static 'inventory/app.css' %}">
 </head>
 <body>
-    <div class="bg-shape bg-shape-a"></div>
-    <div class="bg-shape bg-shape-b"></div>
-
     <header class="page-header">
         <div>
             <p class="eyebrow">ZEUS INVENTORY</p>
             <h1>Panel operativo</h1>
-                <p class="subtitle">Vista simple para gestionar productos, ventas y forecast anual.</p>
+            <p class="subtitle">Vista simple para gestionar productos, ventas y forecast anual.</p>
         </div>
         <a class="admin-link" href="/admin/">Abrir admin</a>
     </header>
@@ -34,6 +31,50 @@
                 <p>Riesgo de stock</p>
                 <strong id="statRisk">0</strong>
             </article>
+        </section>
+
+        <section class="panel visual-panel">
+            <div class="section-head">
+                <div>
+                    <h2>Vista general</h2>
+                    <p>Lectura visual de ventas, stock y rendimiento por producto.</p>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <article class="chart-card chart-wide">
+                    <div class="chart-head">
+                        <h3>Evolucion mensual de ventas</h3>
+                        <p>Unidades e ingresos</p>
+                    </div>
+                    <canvas id="salesTrendChart" height="230"></canvas>
+                </article>
+                <article class="chart-card">
+                    <div class="chart-head">
+                        <h3>Stock disponible</h3>
+                        <p>Top productos por unidades</p>
+                    </div>
+                    <canvas id="stockChart" height="230"></canvas>
+                </article>
+                <article class="chart-card">
+                    <div class="chart-head">
+                        <h3>Productos mas vendidos</h3>
+                        <p>Unidades acumuladas</p>
+                    </div>
+                    <canvas id="topProductsChart" height="230"></canvas>
+                </article>
+                <article class="chart-card">
+                    <div class="chart-head">
+                        <h3>Ventas por categoria</h3>
+                        <p>Participacion en ingresos</p>
+                    </div>
+                    <canvas id="categoryChart" height="230"></canvas>
+                </article>
+            </div>
+
+            <div class="insight-row" id="dashboardInsights">
+                <article class="insight-card">Cargando indicadores visuales...</article>
+            </div>
         </section>
 
         <section class="panel">
@@ -67,6 +108,15 @@
                 <button type="submit" class="primary">Guardar producto</button>
             </form>
 
+            <div class="product-table-tools">
+                <label>Categoria
+                    <select id="productCategoryFilter">
+                        <option value="">Todas las categorias</option>
+                    </select>
+                </label>
+                <span id="productsPageInfo">Pagina 1</span>
+            </div>
+
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -87,6 +137,10 @@
 		                        <tr><td colspan="10" class="empty">Sin productos todavia.</td></tr>
                     </tbody>
                 </table>
+            </div>
+            <div class="pagination">
+                <button type="button" id="productsPrev" class="ghost">Anterior</button>
+                <button type="button" id="productsNext" class="ghost">Siguiente</button>
             </div>
         </section>
 
