@@ -35,9 +35,10 @@
                 <p>Ventas cargadas</p>
                 <strong id="statSales">0</strong>
             </article>
-            <article class="stat-card">
+            <article class="stat-card stock-risk-card">
                 <p>Riesgo de stock</p>
                 <strong id="statRisk">0</strong>
+                <div id="stockRiskTooltip" class="stock-risk-tooltip">Sin productos en riesgo</div>
             </article>
         </section>
 
@@ -247,6 +248,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="{% static 'inventory/app.js' %}?v=jair-clean-20260513" defer></script>
+    <script src="{% static 'inventory/app.js' %}?v=stock-risk-tooltip-20260513" defer></script>
 </body>
 </html>

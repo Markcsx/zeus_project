@@ -37,6 +37,7 @@ const ui = {
     statProducts: $("statProducts"),
     statSales: $("statSales"),
     statRisk: $("statRisk"),
+    stockRiskTooltip: $("stockRiskTooltip"),
     salesTrendChart: $("salesTrendChart"),
     stockChart: $("stockChart"),
     topProductsChart: $("topProductsChart"),
@@ -371,8 +372,11 @@ function drawForecastChart(items) {
 function updateStats() {
     ui.statProducts.textContent = String(state.products.length);
     ui.statSales.textContent = String(state.salesCount || state.sales.length);
-    const risk = state.products.filter((p) => Number(p.stock) <= 0).length;
-    ui.statRisk.textContent = String(risk);
+    const riskProducts = state.products.filter((p) => Number(p.stock) <= 0);
+    ui.statRisk.textContent = String(riskProducts.length);
+    ui.stockRiskTooltip.innerHTML = riskProducts.length
+        ? riskProducts.map((p) => `<span>${p.sku || "-"} - ${p.name || "-"}</span>`).join("")
+        : "<span>Sin productos en riesgo</span>";
 }
 
 function monthLabel(monthKey) {

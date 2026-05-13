@@ -192,6 +192,43 @@ button {
     line-height: 1;
 }
 
+.stock-risk-card {
+    overflow: visible;
+}
+
+.stock-risk-tooltip {
+    position: absolute;
+    right: 12px;
+    top: calc(100% - 8px);
+    z-index: 20;
+    display: grid;
+    gap: 6px;
+    min-width: 260px;
+    max-width: 360px;
+    max-height: 240px;
+    padding: 12px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    overflow-y: auto;
+}
+
+.stock-risk-tooltip span {
+    font-size: 0.88rem;
+    white-space: nowrap;
+}
+
+.stock-risk-card:hover .stock-risk-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .section-head {
     display: flex;
     flex-wrap: wrap;

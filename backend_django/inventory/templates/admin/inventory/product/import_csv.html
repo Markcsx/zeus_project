@@ -2,9 +2,9 @@
 {% load i18n %}
 
 {% block content %}
-<h1>{% translate "Importar ventas desde CSV" %}</h1>
+<h1>{% translate "Importar productos desde CSV" %}</h1>
 
-<p>Columnas: <code>sku,date,quantity,serial_number,client_name,total_price</code>.</p>
+<p>Columnas: <code>sku,name,category,description,price,stock_initial</code>.</p>
 
 <form method="post" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
