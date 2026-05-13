@@ -14,7 +14,16 @@
             <h1>Panel operativo</h1>
             <p class="subtitle">Vista simple para gestionar productos, ventas y forecast anual.</p>
         </div>
-        <a class="admin-link" href="/admin/">Abrir admin</a>
+        <div class="header-actions">
+            <span class="user-chip">{{ request.user.username }}</span>
+            {% if request.user.is_staff %}
+                <a class="admin-link" href="/admin/">Abrir admin</a>
+            {% endif %}
+            <form method="post" action="{% url 'logout' %}" class="logout-form">
+                {% csrf_token %}
+                <button type="submit" class="ghost">Salir</button>
+            </form>
+        </div>
     </header>
 
     <main class="layout">

@@ -3,11 +3,39 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from .forecasting import ForecastResult
 from .models import Product, Sale
+
+
+class InventoryAuthTests(TestCase):
+    def test_app_requires_login(self):
+        response = self.client.get(reverse("inventory-app"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response["Location"])
+
+    def test_regular_user_does_not_see_admin_link(self):
+        user = get_user_model().objects.create_user(username="usuario", password="usuario123")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("inventory-app"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "usuario")
+        self.assertNotContains(response, "Abrir admin")
+
+    def test_staff_user_sees_admin_link(self):
+        user = get_user_model().objects.create_user(username="admin_user", password="admin123", is_staff=True)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("inventory-app"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Abrir admin")
 
 
 class ProductForecastTests(TestCase):

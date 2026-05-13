@@ -1,8 +1,9 @@
 ﻿from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views import View
 
 
-class InventoryAppView(View):
+class InventoryAppView(LoginRequiredMixin, View):
     template_name = "inventory/app.html"
 
     def get(self, request):

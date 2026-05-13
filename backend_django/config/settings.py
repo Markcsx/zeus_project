@@ -140,3 +140,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 # Servicios externos
 FASTAPI_URL = os.environ.get("FASTAPI_URL", "http://127.0.0.1:8001")
+
+# Autenticacion del panel operativo
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "inventory-app"
+LOGOUT_REDIRECT_URL = "login"
