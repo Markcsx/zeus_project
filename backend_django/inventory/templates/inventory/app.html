@@ -73,9 +73,15 @@
                 </article>
                 <article class="chart-card">
                     <div class="chart-head">
-	                        <h3>Ventas por categoria</h3>
+		                        <h3>Categorias mas vendidas</h3>
                     </div>
                     <canvas id="categoryChart" height="230"></canvas>
+                </article>
+                <article class="chart-card">
+                    <div class="chart-head">
+		                        <h3>Participacion por categoria</h3>
+                    </div>
+                    <canvas id="categoryShareChart" height="230"></canvas>
                 </article>
             </div>
 
@@ -248,6 +254,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="{% static 'inventory/app.js' %}?v=dashboard-full-sales-20260513" defer></script>
+    <script src="{% static 'inventory/app.js' %}?v=horizontal-bars-spacing-20260513" defer></script>
 </body>
 </html>

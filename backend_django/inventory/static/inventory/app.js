@@ -42,6 +42,7 @@ const ui = {
     stockChart: $("stockChart"),
     topProductsChart: $("topProductsChart"),
     categoryChart: $("categoryChart"),
+    categoryShareChart: $("categoryShareChart"),
     dashboardInsights: $("dashboardInsights"),
     toast: $("toast"),
 };
@@ -223,7 +224,8 @@ function drawHorizontalBars(canvas, items, options = {}) {
     }
     const { ctx, width, height } = chart;
     const left = 104;
-    const right = 16;
+    const longestDisplay = items.reduce((longest, item) => Math.max(longest, String(item.display ?? item.value).length), 0);
+    const right = Math.max(58, Math.min(112, longestDisplay * 8 + 18));
     const top = 16;
     const rowHeight = Math.min(34, (height - top - 16) / items.length);
     const max = Math.max(...items.map((item) => Number(item.value || 0)), 1);
@@ -241,8 +243,8 @@ function drawHorizontalBars(canvas, items, options = {}) {
         ctx.fillStyle = item.color || options.color || "#216e7a";
         ctx.fillRect(left, y + 5, barWidth, 12);
         ctx.fillStyle = "#263d52";
-        ctx.textAlign = "left";
-        ctx.fillText(String(item.display ?? item.value), left + barWidth + 6, y + 17);
+        ctx.textAlign = "right";
+        ctx.fillText(String(item.display ?? item.value), width - 12, y + 17);
     });
 }
 
@@ -348,14 +350,14 @@ function drawDonutChart(canvas, items) {
     ctx.fill();
     ctx.globalCompositeOperation = "source-over";
 
-    items.slice(0, 5).forEach((item, index) => {
+    items.slice(0, 6).forEach((item, index) => {
         const y = 38 + index * 27;
         ctx.fillStyle = item.color;
         ctx.fillRect(width * 0.62, y - 9, 10, 10);
         ctx.fillStyle = "#263d52";
         ctx.font = "600 11px Segoe UI, sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(`${item.label.slice(0, 14)} ${shortMoney(item.value)}`, width * 0.62 + 16, y);
+        ctx.fillText(`${item.label.slice(0, 13)} ${item.display || shortMoney(item.value)}`, width * 0.62 + 16, y);
     });
 }
 
@@ -442,18 +444,42 @@ function stockByProduct() {
         }));
 }
 
-function salesByCategory() {
-    const colors = ["#216e7a", "#247a52", "#b76617", "#576b95", "#7d5f98", "#8a6c3c"];
+function categorySalesTotals() {
     const grouped = new Map();
     dashboardSales().forEach((sale) => {
         const product = productById(sale.product);
         const category = product && product.category ? product.category : "Sin categoria";
-        grouped.set(category, (grouped.get(category) || 0) + Number(sale.total_price || 0));
+        grouped.set(category, (grouped.get(category) || 0) + Number(sale.units_sold || 0));
     });
     return Array.from(grouped.entries())
-        .sort((a, b) => b[1] - a[1])
+        .sort((a, b) => b[1] - a[1]);
+}
+
+function topCategoriesBySales() {
+    return categorySalesTotals()
         .slice(0, 6)
-        .map(([label, value], index) => ({ label, value, color: colors[index % colors.length] }));
+        .map(([label, value]) => ({ label, value, display: value.toFixed(0) }));
+}
+
+function categoryShare() {
+    const colors = ["#216e7a", "#247a52", "#b76617", "#576b95", "#7d5f98", "#8a6c3c"];
+    const totals = categorySalesTotals();
+    const total = totals.reduce((sum, [, value]) => sum + value, 0);
+    if (!total) {
+        return [];
+    }
+
+    const visible = totals.slice(0, 5);
+    const otherTotal = totals.slice(5).reduce((sum, [, value]) => sum + value, 0);
+    const items = otherTotal > 0 ? [...visible, ["Otros", otherTotal]] : visible;
+
+    return items
+        .map(([label, value], index) => ({
+            label,
+            value,
+            color: colors[index % colors.length],
+            display: `${((value / total) * 100).toFixed(1)}%`,
+        }));
 }
 
 function renderDashboardInsights() {
@@ -494,7 +520,8 @@ function renderDashboardVisuals() {
     drawLineBarChart(ui.salesTrendChart, salesByMonth());
     drawHorizontalBars(ui.stockChart, stockByProduct(), { empty: "Sin productos registrados" });
     drawHorizontalBars(ui.topProductsChart, topProductsBySales(), { color: "#247a52", empty: "Sin ventas registradas" });
-    drawDonutChart(ui.categoryChart, salesByCategory());
+    drawHorizontalBars(ui.categoryChart, topCategoriesBySales(), { color: "#b76617", empty: "Sin ventas por categoria" });
+    drawDonutChart(ui.categoryShareChart, categoryShare());
     renderDashboardInsights();
 }
 
@@ -519,6 +546,17 @@ function setProductCategoryFilterOptions() {
         .join("");
     ui.productCategoryFilter.value = categories.includes(current) ? current : "";
     state.productCategoryFilter = ui.productCategoryFilter.value;
+}
+
+function updateSaleTotal() {
+    const product = productById(ui.saleProduct.value);
+    const quantity = Math.max(1, Number($("saleQuantity").value || 1));
+    if (!product) {
+        $("saleTotal").value = "";
+        return;
+    }
+    $("saleQuantity").value = String(quantity);
+    $("saleTotal").value = (Number(product.price || 0) * quantity).toFixed(2);
 }
 
 function filteredProducts() {
@@ -882,6 +920,9 @@ async function bootstrap() {
         handleCreateSale(event).catch((err) => showToast(err.message, "error"));
     });
 
+    ui.saleProduct.addEventListener("change", updateSaleTotal);
+    $("saleQuantity").addEventListener("input", updateSaleTotal);
+
     $("applyFilters").addEventListener("click", () => {
         state.salesPage = 1;
         loadSales().catch((err) => showToast(err.message, "error"));
@@ -960,6 +1001,7 @@ async function bootstrap() {
     try {
         await loadProducts();
         await Promise.all([loadSales(), loadAnalyticsSales()]);
+        updateSaleTotal();
     } catch (err) {
         showToast(err.message, "error");
     }
