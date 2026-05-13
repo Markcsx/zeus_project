@@ -5,7 +5,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.contrib import admin, messages
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path
 from rest_framework.reverse import reverse
@@ -36,6 +36,15 @@ def parse_date(raw):
     return datetime.strptime(raw, "%Y-%m-%d").date() if raw else date.today()
 
 
+def csv_response(filename, headers, rows):
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    writer = csv.writer(response)
+    writer.writerow(headers)
+    writer.writerows(rows)
+    return response
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ("sku", "name", "category", "stock_initial", "stock_received_total", "stock", "created_at")
@@ -51,6 +60,11 @@ class ProductAdmin(admin.ModelAdmin):
                 "import-csv/",
                 self.admin_site.admin_view(self.import_csv_view),
                 name="inventory_product_import_csv",
+            ),
+            path(
+                "export-csv/",
+                self.admin_site.admin_view(self.export_csv_view),
+                name="inventory_product_export_csv",
             )
         ] + super().get_urls()
 
@@ -125,6 +139,23 @@ class ProductAdmin(admin.ModelAdmin):
         }
         return TemplateResponse(request, "admin/inventory/product/import_csv.html", context)
 
+    def export_csv_view(self, request):
+        headers = ["sku", "name", "category", "description", "price", "stock_initial", "stock"]
+        products = Product.objects.order_by("sku")
+        rows = (
+            [
+                product.sku,
+                product.name,
+                product.category,
+                product.description,
+                product.price,
+                product.stock_initial,
+                product.stock,
+            ]
+            for product in products
+        )
+        return csv_response("productos.csv", headers, rows)
+
 
 @admin.register(Sale)
 class SaleAdmin(admin.ModelAdmin):
@@ -140,6 +171,11 @@ class SaleAdmin(admin.ModelAdmin):
                 "import-csv/",
                 self.admin_site.admin_view(self.import_csv_view),
                 name="inventory_sale_import_csv",
+            ),
+            path(
+                "export-csv/",
+                self.admin_site.admin_view(self.export_csv_view),
+                name="inventory_sale_export_csv",
             )
         ] + super().get_urls()
 
@@ -204,6 +240,22 @@ class SaleAdmin(admin.ModelAdmin):
         }
         return TemplateResponse(request, "admin/inventory/sale/import_csv.html", context)
 
+    def export_csv_view(self, request):
+        headers = ["sku", "date", "quantity", "serial_number", "client_name", "total_price"]
+        sales = Sale.objects.select_related("product").order_by("date", "id")
+        rows = (
+            [
+                sale.product.sku,
+                sale.date.isoformat(),
+                sale.quantity,
+                sale.serial_number,
+                sale.client_name,
+                sale.total_price,
+            ]
+            for sale in sales
+        )
+        return csv_response("ventas.csv", headers, rows)
+
 
 @admin.register(StockMovement)
 class StockMovementAdmin(admin.ModelAdmin):
@@ -219,6 +271,11 @@ class StockMovementAdmin(admin.ModelAdmin):
                 "import-csv/",
                 self.admin_site.admin_view(self.import_csv_view),
                 name="inventory_stockmovement_import_csv",
+            ),
+            path(
+                "export-csv/",
+                self.admin_site.admin_view(self.export_csv_view),
+                name="inventory_stockmovement_export_csv",
             )
         ] + super().get_urls()
 
@@ -270,3 +327,17 @@ class StockMovementAdmin(admin.ModelAdmin):
             "sample": sample.replace(",", ";"),
         }
         return TemplateResponse(request, "admin/inventory/stockmovement/import_csv.html", context)
+
+    def export_csv_view(self, request):
+        headers = ["sku", "date", "quantity", "note"]
+        movements = StockMovement.objects.select_related("product").order_by("date", "id")
+        rows = (
+            [
+                movement.product.sku,
+                movement.date.isoformat(),
+                movement.quantity,
+                movement.note,
+            ]
+            for movement in movements
+        )
+        return csv_response("movimientos_stock.csv", headers, rows)
