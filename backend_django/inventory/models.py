@@ -48,6 +48,8 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         if not self.sku:
             self.sku = self._generate_sku()
+        if self._state.adding and self.stock_initial and not self.stock:
+            self.stock = self.stock_initial
         super().save(*args, **kwargs)
 
     @property

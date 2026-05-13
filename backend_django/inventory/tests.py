@@ -56,6 +56,11 @@ class ProductForecastTests(TestCase):
         self.assertEqual(first.sku, "SEN-SEN-001")
         self.assertEqual(second.sku, "SEN-SEN-002")
 
+    def test_new_product_starts_with_initial_stock_as_current_stock(self):
+        product = Product.objects.create(name="Filtro habitaculo", category="Filtros", stock_initial=25)
+
+        self.assertEqual(product.stock, 25)
+
     def create_sale(self, product, sale_date, units):
         Sale.objects.create(
             product=product,
