@@ -678,7 +678,7 @@ async function loadSales() {
 async function loadAnalyticsSales() {
     let url = "/api/sales/";
     const sales = [];
-    for (let page = 0; url && page < 40; page += 1) {
+    for (let page = 0; url && page < 300; page += 1) {
         const data = await apiFetch(url);
         if (Array.isArray(data)) {
             sales.push(...data);
