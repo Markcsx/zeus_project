@@ -108,3 +108,10 @@ class StockMovement(models.Model):
 @receiver(post_delete, sender=StockMovement)
 def update_product_stock(sender, instance, **kwargs):
     instance.product.recalculate_stock()
+
+
+@receiver(post_save, sender=Product)
+def update_product_stock_after_product_save(sender, instance, raw=False, **kwargs):
+    if raw:
+        return
+    instance.recalculate_stock()

@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .forecasting import ForecastResult
-from .models import Product, Sale
+from .models import Product, Sale, StockMovement
 
 
 class InventoryAuthTests(TestCase):
@@ -162,6 +162,25 @@ class ProductForecastTests(TestCase):
 
         product.refresh_from_db()
         self.assertEqual(product.stock, 16)
+
+    def test_updating_initial_stock_recalculates_current_stock(self):
+        product = Product.objects.create(name="Terminal", category="Direccion", price=Decimal("30.00"), stock_initial=217)
+        Sale.objects.create(
+            product=product,
+            date=date(2026, 1, 1),
+            quantity=288,
+            serial_number="INITIAL-STOCK-SALE",
+            total_price=Decimal("8640.00"),
+        )
+        StockMovement.objects.create(product=product, date=date(2026, 1, 2), quantity=24)
+        product.refresh_from_db()
+        self.assertEqual(product.stock, 0)
+
+        product.stock_initial = 300
+        product.save()
+
+        product.refresh_from_db()
+        self.assertEqual(product.stock, 36)
 
     def test_restock_increases_available_stock_without_changing_sales(self):
         product = Product.objects.create(name="Radiador", category="Refrigeracion", price=Decimal("80.00"), stock_initial=20, stock=20)
