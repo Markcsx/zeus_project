@@ -6,6 +6,7 @@ const state = {
     productsPage: 1,
     productsPageSize: 10,
     productCategoryFilter: "",
+    dashboardProductId: "",
     salesPage: 1,
     salesPageSize: 50,
     salesCount: 0,
@@ -18,6 +19,7 @@ const ui = {
     productForm: $("productForm"),
     saleForm: $("saleForm"),
     productsTableBody: $("productsTableBody"),
+    dashboardProduct: $("dashboardProduct"),
     productCategoryFilter: $("productCategoryFilter"),
     productsPrev: $("productsPrev"),
     productsNext: $("productsNext"),
@@ -369,7 +371,7 @@ function drawForecastChart(items) {
 function updateStats() {
     ui.statProducts.textContent = String(state.products.length);
     ui.statSales.textContent = String(state.salesCount || state.sales.length);
-    const risk = state.products.filter((p) => Number(p.stock) < Number(p.stock_min)).length;
+    const risk = state.products.filter((p) => Number(p.stock) <= 0).length;
     ui.statRisk.textContent = String(risk);
 }
 
@@ -378,9 +380,24 @@ function monthLabel(monthKey) {
     return ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"][Number(month) - 1] || monthKey;
 }
 
+function dashboardProducts() {
+    if (!state.dashboardProductId) {
+        return state.products;
+    }
+    const product = productById(Number(state.dashboardProductId));
+    return product ? [product] : [];
+}
+
+function dashboardSales() {
+    if (!state.dashboardProductId) {
+        return state.analyticsSales;
+    }
+    return state.analyticsSales.filter((sale) => String(sale.product) === String(state.dashboardProductId));
+}
+
 function salesByMonth() {
     const grouped = new Map();
-    state.analyticsSales.forEach((sale) => {
+    dashboardSales().forEach((sale) => {
         const key = String(sale.date || "").slice(0, 7);
         if (!key) {
             return;
@@ -398,7 +415,7 @@ function salesByMonth() {
 
 function topProductsBySales() {
     const grouped = new Map();
-    state.analyticsSales.forEach((sale) => {
+    dashboardSales().forEach((sale) => {
         const product = productById(sale.product);
         const label = product ? product.sku || product.name : sale.product_sku || "Producto";
         grouped.set(label, (grouped.get(label) || 0) + Number(sale.units_sold || 0));
@@ -410,21 +427,21 @@ function topProductsBySales() {
 }
 
 function stockByProduct() {
-    return [...state.products]
+    return [...dashboardProducts()]
         .sort((a, b) => Number(b.stock || 0) - Number(a.stock || 0))
         .slice(0, 6)
         .map((product) => ({
             label: product.sku || product.name,
             value: Number(product.stock || 0),
             display: Number(product.stock || 0).toFixed(0),
-            color: Number(product.stock || 0) < Number(product.stock_min || 0) ? "#b76617" : "#216e7a",
+            color: Number(product.stock || 0) <= 0 ? "#b76617" : "#216e7a",
         }));
 }
 
 function salesByCategory() {
     const colors = ["#216e7a", "#247a52", "#b76617", "#576b95", "#7d5f98", "#8a6c3c"];
     const grouped = new Map();
-    state.analyticsSales.forEach((sale) => {
+    dashboardSales().forEach((sale) => {
         const product = productById(sale.product);
         const category = product && product.category ? product.category : "Sin categoria";
         grouped.set(category, (grouped.get(category) || 0) + Number(sale.total_price || 0));
@@ -436,30 +453,33 @@ function salesByCategory() {
 }
 
 function renderDashboardInsights() {
-    const totalRevenue = state.analyticsSales.reduce((sum, sale) => sum + Number(sale.total_price || 0), 0);
-    const totalUnits = state.analyticsSales.reduce((sum, sale) => sum + Number(sale.units_sold || 0), 0);
-    const riskProducts = state.products.filter((product) => Number(product.stock) < Number(product.stock_min));
+    const sales = dashboardSales();
+    const products = dashboardProducts();
+    const selectedProduct = state.dashboardProductId ? productById(Number(state.dashboardProductId)) : null;
+    const totalRevenue = sales.reduce((sum, sale) => sum + Number(sale.total_price || 0), 0);
+    const totalUnits = sales.reduce((sum, sale) => sum + Number(sale.units_sold || 0), 0);
+    const riskProducts = products.filter((product) => Number(product.stock) <= 0);
     const bestProduct = topProductsBySales()[0];
-    const stockValue = state.products.reduce((sum, product) => sum + Number(product.stock || 0) * Number(product.price || 0), 0);
+    const stockValue = products.reduce((sum, product) => sum + Number(product.stock || 0) * Number(product.price || 0), 0);
 
     ui.dashboardInsights.innerHTML = `
         <article class="insight-card">
-            <p>Ingresos registrados</p>
+            <p>Ingresos</p>
             <strong>${money(totalRevenue)}</strong>
-            <span>${totalUnits.toFixed(0)} unidades vendidas</span>
+            <span>${totalUnits.toFixed(0)} unidades</span>
         </article>
+	        <article class="insight-card">
+	            <p>${selectedProduct ? "Producto" : "Mayor venta"}</p>
+	            <strong>${selectedProduct ? selectedProduct.sku : bestProduct ? bestProduct.label : "-"}</strong>
+	            <span>${selectedProduct ? selectedProduct.name : bestProduct ? `${bestProduct.value.toFixed(0)} unidades` : "Sin ventas"}</span>
+	        </article>
         <article class="insight-card">
-            <p>Producto lider</p>
-            <strong>${bestProduct ? bestProduct.label : "-"}</strong>
-            <span>${bestProduct ? `${bestProduct.value.toFixed(0)} unidades` : "Sin ventas"}</span>
-        </article>
-        <article class="insight-card">
-            <p>Inventario valorizado</p>
+            <p>Inventario</p>
             <strong>${money(stockValue)}</strong>
-            <span>Segun stock y precio actual</span>
+            <span>Valorizado</span>
         </article>
         <article class="insight-card">
-            <p>Atencion de stock</p>
+            <p>Sin stock</p>
             <strong>${riskProducts.length}</strong>
             <span>${riskProducts.slice(0, 2).map((p) => p.sku || p.name).join(", ") || "Sin alertas"}</span>
         </article>
@@ -483,6 +503,8 @@ function setProductSelectOptions() {
     ui.saleProduct.innerHTML = placeholder + options;
     ui.forecastProduct.innerHTML = placeholder + options;
     ui.filterProduct.innerHTML = '<option value="">Todos los productos</option>' + options;
+    ui.dashboardProduct.innerHTML = '<option value="">Todos los productos</option>' + options;
+    ui.dashboardProduct.value = state.dashboardProductId;
 }
 
 function setProductCategoryFilterOptions() {
@@ -515,7 +537,7 @@ function renderProducts() {
     renderProductsPagination(products.length);
 
     if (!products.length) {
-        ui.productsTableBody.innerHTML = '<tr><td colspan="10" class="empty">Sin productos todavia.</td></tr>';
+        ui.productsTableBody.innerHTML = '<tr><td colspan="9" class="empty">Sin productos todavia.</td></tr>';
         updateStats();
         return;
     }
@@ -525,7 +547,7 @@ function renderProducts() {
 
     ui.productsTableBody.innerHTML = visibleProducts
         .map((p) => {
-            const warningClass = Number(p.stock) < Number(p.stock_min) ? "stock-alert" : "";
+            const warningClass = Number(p.stock) <= 0 ? "stock-alert" : "";
             return `
                 <tr>
                     <td>${p.sku || "-"}</td>
@@ -536,7 +558,6 @@ function renderProducts() {
                     <td>${p.stock_received_total ?? 0}</td>
                     <td>${p.units_sold_total ?? 0}</td>
                     <td class="${warningClass}">${p.stock}</td>
-                    <td>${p.stock_min}</td>
                     <td>
                         <button type="button" class="ghost restock-btn" data-product-id="${p.id}">
                             Reabastecer
@@ -781,7 +802,6 @@ async function handleCreateProduct(event) {
         description: $("productDescription").value.trim(),
         price: Number($("productPrice").value),
         stock_initial: Number($("productStock").value),
-        stock_min: Number($("productStockMin").value),
     };
 
     const sku = $("productSku").value.trim();
@@ -884,6 +904,11 @@ async function bootstrap() {
         state.productCategoryFilter = ui.productCategoryFilter.value;
         state.productsPage = 1;
         renderProducts();
+    });
+
+    ui.dashboardProduct.addEventListener("change", () => {
+        state.dashboardProductId = ui.dashboardProduct.value;
+        renderDashboardVisuals();
     });
 
     ui.productsPrev.addEventListener("click", () => {

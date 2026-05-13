@@ -2,9 +2,8 @@ from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal
 
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework import status
 from rest_framework.response import Response
 
 from .forecasting import ForecastingDependencyError, lstm_forecast
@@ -31,20 +30,17 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"])
     def forecast(self, request, pk=None):
-        """
-        Predice ventas del próximo mes calculando unidades vendidas por mes
-        (total_price / price del producto) y calcula el stock necesario para cubrirlas.
-        """
         product = self.get_object()
         sales = Sale.objects.filter(product=product).order_by("date")
 
         monthly_units = defaultdict(Decimal)
-        for s in sales:
-            monthly_units[(s.date.year, s.date.month)] += Decimal(s.quantity or 0)
+        for sale in sales:
+            monthly_units[(sale.date.year, sale.date.month)] += Decimal(sale.quantity or 0)
 
-        history = []
-        for (y, m) in sorted(monthly_units.keys()):
-            history.append({"month": f"{y}-{m:02d}", "total_units": float(monthly_units[(y, m)])})
+        history = [
+            {"month": f"{year}-{month:02d}", "total_units": float(monthly_units[(year, month)])}
+            for year, month in sorted(monthly_units.keys())
+        ]
 
         try:
             forecast = lstm_forecast((item["total_units"] for item in history), horizon=12)
@@ -52,22 +48,22 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         forecast_units = int(round(forecast.values[0])) if forecast.values else 0
-
         last_sale_date = sales.last().date if sales.exists() else date.today()
         requested_month = parse_month(request.query_params.get("start_month"))
         target_month = requested_month or next_month(last_sale_date.replace(day=1))
         annual_forecast = []
         forecast_month = target_month
         projected_stock = product.stock
+
         for raw_units in forecast.values:
-            monthly_units = int(round(raw_units))
-            stock_shortage = max(monthly_units - projected_stock, 0)
-            stock_after_month = max(projected_stock - monthly_units, 0)
+            monthly_units_forecast = int(round(raw_units))
+            stock_shortage = max(monthly_units_forecast - projected_stock, 0)
+            stock_after_month = max(projected_stock - monthly_units_forecast, 0)
             annual_forecast.append(
                 {
                     "month": forecast_month.strftime("%Y-%m"),
-                    "predicted_sales_units": monthly_units,
-                    "stock_required": monthly_units,
+                    "predicted_sales_units": monthly_units_forecast,
+                    "stock_required": monthly_units_forecast,
                     "starting_stock": projected_stock,
                     "stock_shortage": stock_shortage,
                     "recommended_restock": stock_shortage,
@@ -128,7 +124,7 @@ class SaleViewSet(viewsets.ModelViewSet):
             try:
                 qs = qs.filter(id=int(sale_id))
             except ValueError:
-                pass  # id inválido: ignoramos filtro
+                pass
 
         client = params.get("client_name")
         if client:
@@ -146,6 +142,6 @@ class SaleViewSet(viewsets.ModelViewSet):
             try:
                 qs = qs.filter(date=datetime.fromisoformat(date_str).date())
             except ValueError:
-                pass  # fecha inválida: ignoramos filtro
+                pass
 
         return qs

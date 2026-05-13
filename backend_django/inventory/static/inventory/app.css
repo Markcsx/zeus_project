@@ -328,15 +328,15 @@ button:active,
 .login-page {
     display: grid;
     place-items: center;
+    min-height: 100vh;
     padding: 24px;
+    overflow: hidden;
 }
 
 .login-shell {
     display: grid;
-    grid-template-columns: minmax(320px, 430px) minmax(280px, 380px);
-    gap: 18px;
-    width: min(860px, 100%);
-    align-items: stretch;
+    width: min(430px, 100%);
+    align-items: center;
 }
 
 .login-panel {
@@ -373,42 +373,6 @@ button:active,
     background: #fff1f1;
     border: 1px solid #f0caca;
     border-radius: var(--radius);
-}
-
-.login-summary {
-    display: grid;
-    align-content: end;
-    gap: 12px;
-    min-height: 520px;
-    padding: 24px;
-    color: #f8fbfc;
-    background:
-        linear-gradient(145deg, rgba(24, 87, 98, 0.95), rgba(33, 110, 122, 0.78)),
-        #185762;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-}
-
-.login-summary div {
-    padding: 16px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius);
-}
-
-.login-summary span {
-    display: block;
-    margin-bottom: 8px;
-    color: rgba(255, 255, 255, 0.76);
-    font-size: 0.82rem;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.login-summary strong {
-    display: block;
-    font-size: 1.55rem;
-    line-height: 1;
 }
 
 .restock-btn {
@@ -806,12 +770,7 @@ canvas {
         padding: 14px;
     }
 
-    .login-shell {
-        grid-template-columns: 1fr;
-    }
-
-    .login-panel,
-    .login-summary {
+    .login-panel {
         min-height: auto;
         padding: 22px;
     }

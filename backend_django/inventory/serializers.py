@@ -19,7 +19,6 @@ class ProductSerializer(serializers.ModelSerializer):
             "stock_received_total",
             "units_sold_total",
             "stock",
-            "stock_min",
             "created_at",
         ]
 

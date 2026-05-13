@@ -16,7 +16,6 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     stock_initial = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     stock = models.IntegerField(default=0)
-    stock_min = models.IntegerField(default=0)
     created_at = models.DateTimeField(default=timezone.now)
 
     @staticmethod
@@ -25,7 +24,6 @@ class Product(models.Model):
         return (letters[:3] or fallback).ljust(3, "X")
 
     def _generate_sku(self):
-        """Return an autoparts-style SKU like FIL-ACE-011."""
         category_part = self._sku_part(self.category, "AUT")
         name_part = self._sku_part(self.name, "PRD")
         prefix = f"{category_part}-{name_part}"

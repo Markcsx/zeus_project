@@ -55,7 +55,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         created = 0
         updated = 0
-        for sku, name, category, price, stock, stock_min, description in CATALOG:
+        for sku, name, category, price, stock, _stock_min, description in CATALOG:
             _, was_created = Product.objects.update_or_create(
                 sku=sku,
                 defaults={
@@ -65,7 +65,6 @@ class Command(BaseCommand):
                     "price": Decimal(price),
                     "stock_initial": stock,
                     "stock": stock,
-                    "stock_min": stock_min,
                 },
             )
             if was_created:

@@ -1,6 +1,6 @@
-# Zeus Inventory
+# Transporte, Servicios y Repuestos Jair S.A.C
 
-Sistema de inventario y forecast para autopartes. Incluye:
+Sistema de inventario y forecast para autopartes.
 
 - Dashboard web en Django: productos, ventas, graficas, filtros y forecast.
 - API REST con Django REST Framework.

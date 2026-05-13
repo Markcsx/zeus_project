@@ -4,22 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso | Zeus Inventory</title>
+    <title>Transporte, Servicios y Repuestos Jair S.A.C</title>
     <link rel="stylesheet" href="{% static 'inventory/app.css' %}">
 </head>
 <body class="login-page">
     <main class="login-shell">
         <section class="login-panel">
             <div class="login-brand">
-                <p class="eyebrow">ZEUS INVENTORY</p>
-                <h1>Acceso operativo</h1>
-                <p class="subtitle">Gestion de productos, ventas y forecast desde un panel protegido.</p>
+                <p class="eyebrow">Transporte, Servicios y Repuestos Jair S.A.C</p>
+                <h1>Acceso</h1>
             </div>
 
             <form method="post" class="login-form">
                 {% csrf_token %}
                 {% if form.errors %}
-                    <p class="form-error">Usuario o contrasena incorrectos.</p>
+                    <p class="form-error">Usuario o contraseña incorrectos.</p>
                 {% endif %}
                 {% if next %}
                     <input type="hidden" name="next" value="{{ next }}">
@@ -29,27 +28,12 @@
                     <input type="text" name="{{ form.username.html_name }}" autocomplete="username" autofocus required>
                 </label>
                 <label>
-                    Contrasena
+                    Contraseña
                     <input type="password" name="{{ form.password.html_name }}" autocomplete="current-password" required>
                 </label>
-                <button type="submit" class="primary">Entrar al panel</button>
+                <button type="submit" class="primary">Entrar</button>
             </form>
         </section>
-
-        <aside class="login-summary" aria-label="Resumen del panel">
-            <div>
-                <span>Productos</span>
-                <strong>Stock</strong>
-            </div>
-            <div>
-                <span>Ventas</span>
-                <strong>Forecast</strong>
-            </div>
-            <div>
-                <span>Acceso</span>
-                <strong>Seguro</strong>
-            </div>
-        </aside>
     </main>
 </body>
 </html>

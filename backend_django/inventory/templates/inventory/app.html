@@ -4,15 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Inventario</title>
+    <title>Transporte, Servicios y Repuestos Jair S.A.C</title>
     <link rel="stylesheet" href="{% static 'inventory/app.css' %}">
 </head>
 <body>
     <header class="page-header">
         <div>
-            <p class="eyebrow">ZEUS INVENTORY</p>
+            <p class="eyebrow">Transporte, Servicios y Repuestos Jair S.A.C</p>
             <h1>Panel operativo</h1>
-            <p class="subtitle">Vista simple para gestionar productos, ventas y forecast anual.</p>
         </div>
         <div class="header-actions">
             <span class="user-chip">{{ request.user.username }}</span>
@@ -45,51 +44,48 @@
         <section class="panel visual-panel">
             <div class="section-head">
                 <div>
-                    <h2>Vista general</h2>
-                    <p>Lectura visual de ventas, stock y rendimiento por producto.</p>
+	                    <h2>Vista general</h2>
                 </div>
+                <label>Producto
+                    <select id="dashboardProduct"></select>
+                </label>
             </div>
 
             <div class="chart-grid">
                 <article class="chart-card chart-wide">
                     <div class="chart-head">
-                        <h3>Evolucion mensual de ventas</h3>
-                        <p>Unidades e ingresos</p>
+	                        <h3>Evolucion mensual de ventas</h3>
                     </div>
                     <canvas id="salesTrendChart" height="230"></canvas>
                 </article>
                 <article class="chart-card">
                     <div class="chart-head">
-                        <h3>Stock disponible</h3>
-                        <p>Top productos por unidades</p>
+	                        <h3>Stock disponible</h3>
                     </div>
                     <canvas id="stockChart" height="230"></canvas>
                 </article>
                 <article class="chart-card">
                     <div class="chart-head">
-                        <h3>Productos mas vendidos</h3>
-                        <p>Unidades acumuladas</p>
+	                        <h3>Productos mas vendidos</h3>
                     </div>
                     <canvas id="topProductsChart" height="230"></canvas>
                 </article>
                 <article class="chart-card">
                     <div class="chart-head">
-                        <h3>Ventas por categoria</h3>
-                        <p>Participacion en ingresos</p>
+	                        <h3>Ventas por categoria</h3>
                     </div>
                     <canvas id="categoryChart" height="230"></canvas>
                 </article>
             </div>
 
             <div class="insight-row" id="dashboardInsights">
-                <article class="insight-card">Cargando indicadores visuales...</article>
+                <article class="insight-card">Cargando...</article>
             </div>
         </section>
 
         <section class="panel">
             <div class="section-head">
-                <h2>Productos</h2>
-                <p>Crear y revisar stock actual.</p>
+	                <h2>Productos</h2>
             </div>
 
             <form id="productForm" class="form-grid">
@@ -107,9 +103,6 @@
                 </label>
                 <label>Stock inicial
                     <input type="number" id="productStock" min="0" step="1" required>
-                </label>
-                <label>Stock minimo
-                    <input type="number" id="productStockMin" min="0" step="1" required>
                 </label>
                 <label class="full">Descripcion
                     <textarea id="productDescription" rows="2" placeholder="Detalle corto"></textarea>
@@ -135,15 +128,14 @@
                             <th>Categoria</th>
 	                            <th>Precio</th>
 	                            <th>Stock base</th>
-	                            <th>Reabastecido</th>
-	                            <th>Vendido</th>
-	                            <th>Stock actual</th>
-	                            <th>Minimo</th>
-	                            <th>Accion</th>
+		                            <th>Reabastecido</th>
+		                            <th>Vendido</th>
+		                            <th>Stock actual</th>
+		                            <th>Accion</th>
                         </tr>
                     </thead>
                     <tbody id="productsTableBody">
-		                        <tr><td colspan="10" class="empty">Sin productos todavia.</td></tr>
+			                        <tr><td colspan="9" class="empty">Sin productos todavia.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -155,8 +147,7 @@
 
         <section class="panel">
             <div class="section-head">
-                <h2>Ventas</h2>
-                <p>Registrar y filtrar ventas por cliente, fecha o id.</p>
+	                <h2>Ventas</h2>
             </div>
 
             <div class="subsection-head">
@@ -235,28 +226,27 @@
 
         <section class="panel">
             <div class="section-head">
-                <h2>Forecast</h2>
-                <p>Prediccion de unidades y stock recomendado para los proximos 12 meses.</p>
+	                <h2>Forecast</h2>
             </div>
 
 	            <div class="forecast-controls">
 	                <label>Producto
 	                    <select id="forecastProduct"></select>
 	                </label>
-	                <label>Inicio forecast
+	                <label>Inicio
 	                    <input type="month" id="forecastStartMonth">
 	                </label>
-	                <button type="button" id="forecastBtn" class="primary">Consultar forecast</button>
+	                <button type="button" id="forecastBtn" class="primary">Consultar</button>
 	            </div>
 
             <div id="forecastResult" class="forecast-box empty-box">
-                Selecciona un producto y pulsa "Consultar forecast".
+                Selecciona un producto.
             </div>
         </section>
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="{% static 'inventory/app.js' %}?v=restock-forecast-start-20260509" defer></script>
+    <script src="{% static 'inventory/app.js' %}?v=jair-clean-20260513" defer></script>
 </body>
 </html>
